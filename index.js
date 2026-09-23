@@ -148,8 +148,13 @@ module.exports = function (app) {
                   },
                   includeOwnVessel: {
                     type: 'boolean',
-                    title: 'Include own vessel (as AIVDO)',
+                    title: 'Include own vessel',
                     default: true
+                  },
+                  ownVesselAsAivdm: {
+                    type: 'boolean',
+                    title: 'Send own vessel as AIVDM instead of AIVDO (MarineTraffic and AISHub need this)',
+                    default: false
                   },
                   convert0183: {
                     type: 'boolean',
@@ -232,6 +237,7 @@ module.exports = function (app) {
       ...saved,
       messageTypes: adv.messageTypes !== undefined ? adv.messageTypes : saved.messageTypes,
       includeOwnVessel: adv.includeOwnVessel !== undefined ? adv.includeOwnVessel : saved.includeOwnVessel,
+      ownVesselAsAivdm: adv.ownVesselAsAivdm !== undefined ? adv.ownVesselAsAivdm : saved.ownVesselAsAivdm,
       convert0183: adv.convert0183 !== undefined ? adv.convert0183 : saved.convert0183
     }
     const stream = {
@@ -307,7 +313,8 @@ module.exports = function (app) {
     try {
       sentence = converter.encode(whole.bytes, {
         ownMmsi: app.getSelfPath('mmsi'),
-        includeOwn: stream.config.includeOwnVessel !== false
+        includeOwn: stream.config.includeOwnVessel !== false,
+        ownAsAivdm: stream.config.ownVesselAsAivdm === true
       })
     } catch (err) {
       recordError(stream, err)

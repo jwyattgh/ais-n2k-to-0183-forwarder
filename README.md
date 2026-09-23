@@ -52,6 +52,9 @@ message types.
 | 129810 Class B static data part B | 24B |
 
 Your own vessel's messages go out as `!AIVDO`, everything else as `!AIVDM`.
+MarineTraffic and AISHub ignore `!AIVDO`, so tick "Send own vessel as
+AIVDM" under Advanced when feeding them; your own position then goes out
+like any other vessel's.
 Each message is converted straight from the NMEA 2000 bytes, not from
 Signal K's data model, so nothing is rounded or lost.
 
@@ -61,6 +64,7 @@ Signal K's data model, so nothing is rounded or lost.
 |---|---|
 | AIS message types | Limit which message types are sent. Empty means all. |
 | Include own vessel | Off leaves out your own vessel's messages. |
+| Send own vessel as AIVDM | Labels your own vessel's messages `!AIVDM` instead of `!AIVDO`. Needed for MarineTraffic and AISHub. |
 | Convert AIS to NMEA 0183 | Off sends canboat JSON instead, for debugging. |
 
 ## Terms

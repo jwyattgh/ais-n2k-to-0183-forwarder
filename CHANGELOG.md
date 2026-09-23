@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- New advanced setting "Send own vessel as AIVDM instead of AIVDO".
+  MarineTraffic and AISHub ignore `!AIVDO`, so without it your own vessel
+  never appears on those sites.
+
 ## 0.1.1
 
 - Fix: the connection dropdown was empty on a real Signal K server because

@@ -139,6 +139,16 @@ test('129039 class B position report -> message 18, own vessel as AIVDO', () => 
   assert.strictEqual(u(b, 148, 168), 0, 'communication state')
 })
 
+test('own vessel goes out as AIVDM when asked', () => {
+  const sentence = encode([
+    '11:19:40.262 R 11F80F01 80 1B 12 DE 3E F0 15 95',
+    '11:19:40.263 R 11F80F01 81 A0 F3 D7 3F 1C C5 0A',
+    '11:19:40.264 R 11F80F01 82 A0 FF FF 0A 00 00 00',
+    '11:19:40.264 R 11F80F01 83 20 FF FF 00 70 FE FF'
+  ], { ...CTX, ownAsAivdm: true })
+  assert.match(sentence, /^!AIVDM,1,1,,A,/)
+})
+
 test('129039 from another vessel is AIVDM on the received channel', () => {
   const sentence = encode([
     '11:19:42.233 R 11F80F01 C0 1B 12 DE 3E F0 15 A6',
