@@ -1,5 +1,5 @@
 /*
- * ais-n2k-to-0183-forwarder: a Signal K plugin.
+ * @sv-orion/ais-n2k-to-0183-forwarder: a Signal K plugin (plugin id ais-n2k-to-0183-forwarder).
  *
  * Each stream: pick NMEA 2000 devices (by permanent CAN name) on one
  * connection, optionally convert their AIS messages to NMEA 0183, and

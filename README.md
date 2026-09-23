@@ -1,7 +1,7 @@
-# ais-n2k-to-0183-forwarder
+# @sv-orion/ais-n2k-to-0183-forwarder
 
 [![test](https://github.com/jwyattgh/ais-n2k-to-0183-forwarder/actions/workflows/test.yml/badge.svg)](https://github.com/jwyattgh/ais-n2k-to-0183-forwarder/actions/workflows/test.yml)
-[![npm](https://img.shields.io/npm/v/ais-n2k-to-0183-forwarder)](https://www.npmjs.com/package/ais-n2k-to-0183-forwarder)
+[![npm](https://img.shields.io/npm/v/@sv-orion/ais-n2k-to-0183-forwarder)](https://www.npmjs.com/package/@sv-orion/ais-n2k-to-0183-forwarder)
 
 A [Signal K](https://signalk.org) plugin that takes AIS from chosen NMEA 2000
 devices, converts it to NMEA 0183 (`!AIVDM` / `!AIVDO`) and forwards it to
@@ -29,7 +29,7 @@ they feed want NMEA 0183. Per named stream, it does three things:
 ## Install
 
 From the Signal K admin page, Appstore, search for
-`ais-n2k-to-0183-forwarder` and install. Restart the server when asked, then
+`ais-n2k-to-0183-forwarder` (published as `@sv-orion/ais-n2k-to-0183-forwarder`) and install. Restart the server when asked, then
 enable and configure the plugin under Server → Plugin Config.
 
 ## Settings
