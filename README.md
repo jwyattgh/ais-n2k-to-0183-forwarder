@@ -22,9 +22,9 @@ they feed want NMEA 0183. Per named stream, it does three things:
 ## Requirements
 
 - Signal K server 2.x on Node 18 or later.
-- The NMEA 2000 connection in Signal K must be a **Yacht Devices YDWG-02
-  RAW** stream (TCP or UDP). The plugin reads the gateway's raw lines, which
-  other connection types do not expose.
+- An NMEA 2000 connection in Signal K (any canboatjs type: socketcan,
+  Actisense, Yacht Devices, iKonvert, and so on). The plugin reads the
+  connection's raw frames.
 
 ## Install
 
@@ -41,7 +41,7 @@ Each stream is a separate job with its own devices and destinations.
 | Name | Labels the status line and the dry-run log. |
 | Enabled | Switch the stream on or off. |
 | Dry run | On by default. What would be sent goes to `<data dir>/<name>-dryrun.log` (rotated at 5 MB) and nothing leaves the boat. |
-| Connection | Which Signal K connection to read. YDWG-02 RAW connections are listed first. |
+| Connection | Which Signal K NMEA 2000 connection to read. |
 | Devices | Pick from the devices Signal K has seen, by model, serial number and connection. |
 | AIS message types | Which message types to convert. Empty means all. |
 | Convert AIS to NMEA 0183 | On by default. Off sends one line of canboat JSON per message instead, for debugging. |
@@ -51,6 +51,11 @@ Each stream is a separate job with its own devices and destinations.
 The plugin's status line shows, per stream, how many sentences went out,
 which bus address each chosen device is at (or that it is still waiting for
 one), and any message types from those devices it could not convert.
+
+Two web endpoints help when checking a dry run, at
+`/plugins/ais-n2k-to-0183-forwarder/status` (the status line and per-stream
+counters as JSON) and `/plugins/ais-n2k-to-0183-forwarder/log/<stream name>`
+(the last lines of that stream's dry-run log; `?lines=200` for more).
 
 ## Message types converted
 
@@ -78,7 +83,7 @@ converter in `lib/ais/` reads the NMEA 2000 fields at their bit offsets,
 applies the unit change (for example, position from 1e-7 degrees to
 1/10000 minute) and writes the AIS bit layout. `lib/ais/common.js` holds the
 readers, writers and shared field conversions; `lib/fast-packet.js`
-reassembles multi-frame messages from the gateway's raw lines.
+reassembles multi-frame messages from the connection's raw lines.
 
 To add a message type, add a file named after its PGN to `lib/ais/`
 exporting `{ pgn, title, encode(bytes, ctx) }`, and a test in
@@ -91,7 +96,7 @@ npm test
 ```
 
 Six converters are tested against real messages recorded from a Raymarine
-AIS700 (the gateway's raw frames); the two class A converters against
+AIS700 (raw frames from a Yacht Devices gateway); the two class A converters against
 constructed messages. Every test unpacks the resulting sentence by the AIS
 bit layout and checks each field. Device following is tested with recorded
 address announcements.

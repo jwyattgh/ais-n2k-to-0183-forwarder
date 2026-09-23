@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1
+
+- Fix: the connection dropdown was empty on a real Signal K server because
+  the connection type is stored one level deeper than assumed.
+- The device list now offers only AIS devices (NMEA 2000 device class 60,
+  function 195).
+- Any canboatjs NMEA 2000 connection works, not only a Yacht Devices
+  gateway; docs corrected.
+- New web endpoints under `/plugins/ais-n2k-to-0183-forwarder/`: `status`
+  (JSON counters) and `log/<stream name>` (tail of the dry-run log).
+
 ## 0.1.0
 
 First release.

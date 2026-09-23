@@ -7,10 +7,13 @@ function fakeApp () {
   app.config = {
     version: '2.19.1',
     settings: {
+      // The shape Signal K 2.x writes to settings.json: the driver is in
+      // options.subOptions.type. The last entry is the older flat shape.
       pipedProviders: [
-        { id: 'gps-0183', pipeElements: [{ options: { type: 'udp' } }] },
-        { id: 'n2k-socket', pipeElements: [{ options: { type: 'canbus-canboatjs' } }] },
-        { id: 'ydwg-n2k-udp', pipeElements: [{ options: { type: 'ydwg02-udp-canboatjs' } }] }
+        { id: 'gps-0183', pipeElements: [{ type: 'providers/simple', options: { type: 'NMEA0183', subOptions: { type: 'udp', port: 1457 } } }] },
+        { id: 'n2k-socket', pipeElements: [{ type: 'providers/simple', options: { type: 'NMEA2000', subOptions: { type: 'canbus-canboatjs', interface: 'can0' } } }] },
+        { id: 'ydwg-n2k-udp', pipeElements: [{ type: 'providers/simple', options: { type: 'NMEA2000', subOptions: { type: 'ydwg02-udp-canboatjs', port: 1458 } } }] },
+        { id: 'flat-n2k', pipeElements: [{ options: { type: 'canbus-canboatjs' } }] }
       ]
     }
   }
@@ -25,7 +28,8 @@ function fakeApp () {
       sources: {
         'ydwg-n2k-udp': {
           1: { n2k: { canName: 'c078c37ae76baa6d', modelId: 'AIS700', modelSerialCode: '1234' } },
-          7: { n2k: { canName: 'aa' } },
+          7: { n2k: { canName: 'c0f08261e7701bfb', modelId: 'i70s' } }, // a display, not AIS
+          75: { n2k: { canName: 'c078c38de7701d02', modelId: 'Ray73 AIS' } },
           8: { }
         }
       }
@@ -34,12 +38,12 @@ function fakeApp () {
   return app
 }
 
-test('settings form lists connections, gateway first, and known devices', () => {
+test('settings form lists NMEA 2000 connections and AIS devices', () => {
   const plugin = require('..')(fakeApp())
   const stream = plugin.schema().properties.streams.items.properties
-  assert.deepStrictEqual(stream.connection.enum, ['ydwg-n2k-udp', 'n2k-socket'])
-  assert.strictEqual(stream.connection.default, 'ydwg-n2k-udp')
-  assert.deepStrictEqual(stream.devices.items.enum, ['c078c37ae76baa6d', 'aa'])
+  assert.deepStrictEqual(stream.connection.enum, ['n2k-socket', 'ydwg-n2k-udp', 'flat-n2k'], 'in settings order')
+  assert.strictEqual(stream.connection.default, 'n2k-socket')
+  assert.deepStrictEqual(stream.devices.items.enum, ['c078c37ae76baa6d', 'c078c38de7701d02'], 'AIS devices only')
   assert.match(stream.devices.items.enumNames[0], /AIS700/)
   assert.ok(stream.messageTypes.items.enum.length === 8)
   assert.strictEqual(stream.pgns, undefined, 'no raw PGN filter')

@@ -13,8 +13,8 @@
  * Forward: UDP or TCP, or a dry-run log file.
  *
  * Without conversion, every passing message is sent as one line of
- * canboat JSON. The raw bytes come from the connection's own raw-line
- * event, so the connection must be a Yacht Devices YDWG-02 RAW stream.
+ * canboat JSON. The raw bytes come from the connection's raw-line event,
+ * which every canboatjs NMEA 2000 driver emits.
  */
 const dgram = require('dgram')
 const fs = require('fs')
@@ -40,6 +40,46 @@ module.exports = function (app) {
   let onMessage
   let onRawLine
   let statusTimer
+  let lastStatus = ''
+
+  // Web endpoints under /plugins/ais-n2k-to-0183-forwarder/:
+  //   GET status            the status line plus per-stream counters
+  //   GET log/<stream name> the tail of that stream's dry-run log
+  //                         (?lines=N, default 50, max 1000)
+  plugin.registerWithRouter = router => {
+    router.get('/status', (req, res) => {
+      res.json({
+        status: lastStatus,
+        streams: streams.map(stream => ({
+          name: stream.config.name,
+          dryRun: !!stream.logPath,
+          logPath: stream.logPath,
+          addresses: Object.fromEntries(stream.addresses),
+          waitingFor: missingDevices(stream),
+          sentences: stream.sentences,
+          messages: stream.messages,
+          converted: stream.converted,
+          unconverted: stream.unconverted,
+          errors: stream.errors,
+          lastError: stream.lastError
+        }))
+      })
+    })
+    router.get('/log/:name', (req, res) => {
+      const stream = streams.find(s => s.config.name === req.params.name)
+      if (!stream) return res.status(404).json({ error: 'no such stream' })
+      if (!stream.logPath) return res.status(404).json({ error: 'stream is not in dry-run mode' })
+      const lines = Math.min(1000, Math.max(1, parseInt(req.query.lines, 10) || 50))
+      let text = ''
+      try {
+        text = fs.readFileSync(stream.logPath, 'utf8')
+      } catch (err) {
+        if (err.code !== 'ENOENT') return res.status(500).json({ error: err.message })
+      }
+      const all = text.split('\n').filter(Boolean)
+      res.type('text/plain').send(all.slice(-lines).join('\n') + (all.length ? '\n' : ''))
+    })
+  }
 
   plugin.schema = () => {
     const devices = knownDevices()
@@ -50,7 +90,7 @@ module.exports = function (app) {
     }
     const connectionItem = {
       type: 'string',
-      title: 'Signal K connection to read (NMEA 2000, YDWG-02 RAW)'
+      title: 'Signal K connection to read (NMEA 2000)'
     }
     const connections = knownConnections()
     if (connections.length > 0) {
@@ -360,17 +400,30 @@ module.exports = function (app) {
     }
   }
 
-  // The NMEA 2000 connections the server is configured with, YDWG-02 RAW
-  // ones first since only those carry the raw lines this plugin reads.
+  // The NMEA 2000 (canboatjs) connections the server is configured with.
+  // Every canboatjs driver emits the raw lines this plugin reads.
   function knownConnections () {
     const providers = (app.config && app.config.settings && app.config.settings.pipedProviders) || []
-    const n2k = providers.filter(p => {
+    // Signal K stores a connection as pipeElements[0].options.type = 'NMEA2000'
+    // with the driver in options.subOptions.type; hand-written configs may
+    // put the driver in options.type directly.
+    const driverOf = p => {
       const el = p.pipeElements && p.pipeElements[0]
-      const type = el && el.options && el.options.type
-      return typeof type === 'string' && type.includes('canboatjs')
-    })
-    const raw = n2k.filter(p => p.pipeElements[0].options.type.startsWith('ydwg02'))
-    return [...raw, ...n2k.filter(p => !raw.includes(p))].map(p => p.id)
+      const opts = (el && el.options) || {}
+      const type = (opts.subOptions && opts.subOptions.type) || opts.type
+      return typeof type === 'string' ? type : ''
+    }
+    return providers.filter(p => driverOf(p).includes('canboatjs')).map(p => p.id)
+  }
+
+  // Only AIS devices are offered: NMEA 2000 device class 60 (Navigation)
+  // with device function 195 (AIS), read from the permanent name itself.
+  function isAisDevice (canName) {
+    if (typeof canName !== 'string' || !/^[0-9a-f]{1,16}$/i.test(canName)) return false
+    const name = BigInt('0x' + canName)
+    const deviceFunction = Number((name >> 40n) & 0xffn)
+    const deviceClass = Number((name >> 49n) & 0x7fn)
+    return deviceClass === 60 && deviceFunction === 195
   }
 
   function knownDevices () {
@@ -379,7 +432,7 @@ module.exports = function (app) {
     Object.keys(sources).forEach(connection => {
       Object.keys(sources[connection] || {}).forEach(addr => {
         const n2k = sources[connection][addr] && sources[connection][addr].n2k
-        if (!n2k || !n2k.canName) return
+        if (!n2k || !n2k.canName || !isAisDevice(n2k.canName)) return
         const model = n2k.modelVersion || n2k.modelId || n2k.manufacturerCode || 'device'
         const serial = n2k.modelSerialCode ? ` s/n ${n2k.modelSerialCode}` : ''
         devices.push({ canName: n2k.canName, label: `${model}${serial} (${connection})` })
@@ -421,9 +474,14 @@ module.exports = function (app) {
     stream.lastError = err.message
   }
 
+  function setStatus (text) {
+    lastStatus = text
+    app.setPluginStatus(text)
+  }
+
   function reportStatus () {
     if (streams.length === 0) {
-      app.setPluginStatus('No streams enabled')
+      setStatus('No streams enabled')
       return
     }
     const parts = streams.map(stream => {
@@ -444,7 +502,7 @@ module.exports = function (app) {
         (skipped.length ? `; not converted: ${skipped.join(' ')}` : '') +
         (stream.errors ? `; ${stream.errors} errors (last: ${stream.lastError})` : '')
     })
-    app.setPluginStatus(parts.join(' | '))
+    setStatus(parts.join(' | '))
   }
 
   return plugin
