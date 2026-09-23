@@ -45,7 +45,12 @@ test('settings form lists NMEA 2000 connections and AIS devices', () => {
   assert.strictEqual(stream.connection.default, 'n2k-socket')
   assert.deepStrictEqual(stream.devices.items.enum, ['c078c37ae76baa6d', 'c078c38de7701d02'], 'AIS devices only')
   assert.match(stream.devices.items.enumNames[0], /AIS700/)
-  assert.ok(stream.messageTypes.items.enum.length === 8)
+  assert.ok(stream.advanced.properties.messageTypes.items.enum.length === 8)
+  assert.deepStrictEqual(stream['ui:order'], undefined)
+  const ui = plugin.uiSchema().streams.items
+  assert.strictEqual(ui.devices['ui:widget'], 'checkboxes')
+  assert.strictEqual(ui.advanced.messageTypes['ui:widget'], 'checkboxes')
+  assert.deepStrictEqual(ui['ui:order'].slice(0, 4), ['name', 'enabled', 'connection', 'devices'])
   assert.strictEqual(stream.pgns, undefined, 'no raw PGN filter')
 })
 

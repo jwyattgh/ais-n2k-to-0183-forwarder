@@ -88,10 +88,7 @@ module.exports = function (app) {
       deviceItems.enum = devices.map(d => d.canName)
       deviceItems.enumNames = devices.map(d => d.label)
     }
-    const connectionItem = {
-      type: 'string',
-      title: 'Signal K connection to read (NMEA 2000)'
-    }
+    const connectionItem = { type: 'string', title: 'NMEA 2000 connection' }
     const connections = knownConnections()
     if (connections.length > 0) {
       connectionItem.enum = connections
@@ -107,38 +104,14 @@ module.exports = function (app) {
             type: 'object',
             required: ['name', 'connection'],
             properties: {
-              name: { type: 'string', title: 'Name' },
+              name: { type: 'string', title: 'Name', default: 'AIS' },
               enabled: { type: 'boolean', title: 'Enabled', default: true },
-              dryRun: {
-                type: 'boolean',
-                title: 'Dry run (log only, send nothing)',
-                default: true
-              },
               connection: connectionItem,
               devices: {
                 type: 'array',
-                title: 'Devices',
-                description:
-                  'Only messages sent by these devices pass. Nothing is sent until each is identified.',
-                items: deviceItems
-              },
-              convert0183: {
-                type: 'boolean',
-                title: 'Convert AIS to NMEA 0183',
-                description:
-                  'Without conversion, each message is sent as one line of canboat JSON.',
-                default: true
-              },
-              messageTypes: {
-                type: 'array',
-                title: 'AIS message types to convert. Leave empty for all.',
-                items: { type: 'string', enum: ais.converters.map(c => c.title) },
+                title: 'AIS devices',
+                items: deviceItems,
                 uniqueItems: true
-              },
-              includeOwnVessel: {
-                type: 'boolean',
-                title: 'Include own vessel (sent as AIVDO)',
-                default: true
               },
               destinations: {
                 type: 'array',
@@ -157,6 +130,33 @@ module.exports = function (app) {
                     }
                   }
                 }
+              },
+              dryRun: {
+                type: 'boolean',
+                title: 'Dry run: write to a log file instead of sending',
+                default: true
+              },
+              advanced: {
+                type: 'object',
+                title: 'Advanced',
+                properties: {
+                  messageTypes: {
+                    type: 'array',
+                    title: 'AIS message types (none ticked = all)',
+                    items: { type: 'string', enum: ais.converters.map(c => c.title) },
+                    uniqueItems: true
+                  },
+                  includeOwnVessel: {
+                    type: 'boolean',
+                    title: 'Include own vessel (as AIVDO)',
+                    default: true
+                  },
+                  convert0183: {
+                    type: 'boolean',
+                    title: 'Convert to NMEA 0183 (off = canboat JSON, for debugging)',
+                    default: true
+                  }
+                }
               }
             }
           }
@@ -164,6 +164,22 @@ module.exports = function (app) {
       }
     }
   }
+
+  // How the Signal K admin page lays the form out.
+  plugin.uiSchema = () => ({
+    streams: {
+      'ui:options': { orderable: false },
+      items: {
+        'ui:order': ['name', 'enabled', 'connection', 'devices', 'destinations', 'dryRun', 'advanced'],
+        devices: { 'ui:widget': 'checkboxes' },
+        destinations: { 'ui:options': { orderable: false } },
+        advanced: {
+          'ui:options': { collapsed: true },
+          messageTypes: { 'ui:widget': 'checkboxes' }
+        }
+      }
+    }
+  })
 
   plugin.start = options => {
     streams = (options.streams || [])
@@ -208,7 +224,16 @@ module.exports = function (app) {
     streams = []
   }
 
-  function createStream (config) {
+  function createStream (saved) {
+    // The advanced settings live under `advanced` on the form; configs saved
+    // by 0.1.x had them at the top level. Accept both.
+    const adv = saved.advanced || {}
+    const config = {
+      ...saved,
+      messageTypes: adv.messageTypes !== undefined ? adv.messageTypes : saved.messageTypes,
+      includeOwnVessel: adv.includeOwnVessel !== undefined ? adv.includeOwnVessel : saved.includeOwnVessel,
+      convert0183: adv.convert0183 !== undefined ? adv.convert0183 : saved.convert0183
+    }
     const stream = {
       config,
       wanted: config.devices || [],
@@ -264,7 +289,7 @@ module.exports = function (app) {
   function handleParsed (stream, msg) {
     if (!passes(stream, msg.src)) return
     stream.messages++
-    if (!stream.config.convert0183) {
+    if (stream.config.convert0183 === false) {
       send(stream, JSON.stringify(msg))
       return
     }
@@ -274,7 +299,7 @@ module.exports = function (app) {
   }
 
   function handleRaw (stream, whole) {
-    if (!stream.config.convert0183) return
+    if (stream.config.convert0183 === false) return
     const converter = stream.converters.get(whole.pgn)
     if (!converter) return
     if (!passes(stream, whole.src)) return
@@ -433,9 +458,10 @@ module.exports = function (app) {
       Object.keys(sources[connection] || {}).forEach(addr => {
         const n2k = sources[connection][addr] && sources[connection][addr].n2k
         if (!n2k || !n2k.canName || !isAisDevice(n2k.canName)) return
-        const model = n2k.modelVersion || n2k.modelId || n2k.manufacturerCode || 'device'
+        const model = (n2k.modelVersion || n2k.modelId || n2k.manufacturerCode || 'AIS device')
+          .replace(/^Raymarine /, '')
         const serial = n2k.modelSerialCode ? ` s/n ${n2k.modelSerialCode}` : ''
-        devices.push({ canName: n2k.canName, label: `${model}${serial} (${connection})` })
+        devices.push({ canName: n2k.canName, label: `${model}${serial}`, connection })
       })
     })
     return devices

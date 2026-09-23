@@ -10,6 +10,9 @@
   gateway; docs corrected.
 - New web endpoints under `/plugins/ais-n2k-to-0183-forwarder/`: `status`
   (JSON counters) and `log/<stream name>` (tail of the dry-run log).
+- Settings page tidied: devices and message types are checkboxes, the
+  rarely used switches sit under "Advanced", shorter labels.
+- README rewritten to say what is needed and how to set it up.
 
 ## 0.1.0
 
