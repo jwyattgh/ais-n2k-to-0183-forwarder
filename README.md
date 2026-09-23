@@ -6,6 +6,17 @@
 A Signal K plugin that sends the AIS your NMEA 2000 receiver hears to
 services that want NMEA 0183, such as MarineTraffic and AISHub.
 
+## Why
+
+We were sending NMEA 0183 AIS to MarineTraffic and AISHub with a general
+forwarder, and also pulling AISHub's data into Signal K. There was no way
+to be sure the AISHub data was not leaking back to AISHub through that
+forwarder. This plugin closes that gap. It reads the NMEA 2000 bus directly,
+keeps only messages from the AIS device you pick, converts them to NMEA
+0183 (which MarineTraffic and AISHub require), and forwards them to any
+number of hosts, ports and protocols. Nothing that came from anywhere else
+can get through.
+
 ## What you need
 
 - Signal K server 2.x.
