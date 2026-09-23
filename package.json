@@ -1,0 +1,38 @@
+{
+  "name": "ais-n2k-to-0183-forwarder",
+  "version": "0.1.0",
+  "description": "Signal K plugin: forward AIS from chosen NMEA 2000 devices as NMEA 0183 (AIVDM/AIVDO) to one or more hosts",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-category-ais",
+    "signalk-category-nmea-2000"
+  ],
+  "author": "Jason Wyatt",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jwyattgh/ais-n2k-to-0183-forwarder.git"
+  },
+  "homepage": "https://github.com/jwyattgh/ais-n2k-to-0183-forwarder#readme",
+  "bugs": {
+    "url": "https://github.com/jwyattgh/ais-n2k-to-0183-forwarder/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@canboat/canboatjs": "^3.20.0"
+  }
+}
