@@ -96,6 +96,18 @@ constructed messages. Every test unpacks the resulting sentence by the AIS
 bit layout and checks each field. Device following is tested with recorded
 address announcements.
 
+## Releasing
+
+Releases are published to npm by GitHub Actions
+(`.github/workflows/publish.yml`) using npm trusted publishing, so no npm
+token is stored anywhere. To release:
+
+1. Bump `version` in `package.json` and add a section to `CHANGELOG.md`.
+2. Commit and push to `main`; wait for the test workflow to pass.
+3. On GitHub, create a release with tag `v<version>` (for example `v0.1.1`).
+   The workflow runs the tests, checks the tag matches `package.json`, and
+   publishes with provenance.
+
 ## Privacy and terms
 
 The plugin sends exactly the AIS your own receiver hears, and only from the
