@@ -153,8 +153,8 @@ module.exports = function (app) {
                   },
                   ownVesselAsAivdm: {
                     type: 'boolean',
-                    title: 'Send own vessel as AIVDM instead of AIVDO (MarineTraffic and AISHub need this)',
-                    default: false
+                    title: 'Send own vessel as AIVDM instead of AIVDO (needed for MarineTraffic and AISHub; turn off when feeding a plotter)',
+                    default: true
                   },
                   convert0183: {
                     type: 'boolean',
@@ -314,7 +314,7 @@ module.exports = function (app) {
       sentence = converter.encode(whole.bytes, {
         ownMmsi: app.getSelfPath('mmsi'),
         includeOwn: stream.config.includeOwnVessel !== false,
-        ownAsAivdm: stream.config.ownVesselAsAivdm === true
+        ownAsAivdm: stream.config.ownVesselAsAivdm !== false
       })
     } catch (err) {
       recordError(stream, err)

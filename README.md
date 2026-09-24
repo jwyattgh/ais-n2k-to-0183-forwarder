@@ -51,10 +51,14 @@ message types.
 | 129809 Class B static data part A | 24A |
 | 129810 Class B static data part B | 24B |
 
-Your own vessel's messages go out as `!AIVDO`, everything else as `!AIVDM`.
-MarineTraffic and AISHub ignore `!AIVDO`, so tick "Send own vessel as
-AIVDM" under Advanced when feeding them; your own position then goes out
-like any other vessel's.
+Everything goes out as `!AIVDM`, including your own vessel. AISHub does not
+display own-vessel `!AIVDO` sentences (see the note on
+[ais-forwarder's conversion option](https://github.com/hkapanen/ais-forwarder/pull/9)
+and [aiscast](https://github.com/openwatersio/aiscast/pull/66), which both
+re-encode for the same reason), and MarineTraffic locates a vessel-mounted
+station from the vessel's own position report against its MMSI. If you feed
+a plotter instead, untick "Send own vessel as AIVDM" under Advanced and
+your own vessel goes out as `!AIVDO`, which the plotter treats as "me".
 Each message is converted straight from the NMEA 2000 bytes, not from
 Signal K's data model, so nothing is rounded or lost.
 
@@ -64,7 +68,7 @@ Signal K's data model, so nothing is rounded or lost.
 |---|---|
 | AIS message types | Limit which message types are sent. Empty means all. |
 | Include own vessel | Off leaves out your own vessel's messages. |
-| Send own vessel as AIVDM | Labels your own vessel's messages `!AIVDM` instead of `!AIVDO`. Needed for MarineTraffic and AISHub. |
+| Send own vessel as AIVDM | On by default. Off sends your own vessel as `!AIVDO`, which is right for a plotter but not for MarineTraffic or AISHub. |
 | Convert AIS to NMEA 0183 | Off sends canboat JSON instead, for debugging. |
 
 ## Terms

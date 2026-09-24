@@ -57,6 +57,7 @@ test('follows the AIS700 when its address changes', async () => {
       streams: [{
         name: 'test', enabled: true, dryRun: true, connection: 'ydwg-n2k-udp',
         devices: [AIS700], pgns: [], convert0183: true, includeOwnVessel: true,
+        ownVesselAsAivdm: false,
         destinations: [{ host: '127.0.0.1', port: 9, protocol: 'udp' }]
       }]
     })
@@ -87,6 +88,24 @@ test('follows the AIS700 when its address changes', async () => {
     position(app, 1)
     assert.strictEqual(lines().length, 3, 'AIS700 reappears at 01: sending again')
     assert.match(app.status, /test:/)
+  } finally { plugin.stop() }
+})
+
+test('own vessel goes out as AIVDM unless told otherwise', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'of-'))
+  const app = fakeApp(dir)
+  const plugin = require('..')(app)
+  try {
+    plugin.start({
+      streams: [{
+        name: 'test', enabled: true, dryRun: true, connection: 'ydwg-n2k-udp',
+        devices: [AIS700], pgns: [], convert0183: true, includeOwnVessel: true
+      }]
+    })
+    app.emit('canboatjs:rawoutput', CLAIM_AT_1)
+    position(app, 1)
+    const line = fs.readFileSync(path.join(dir, 'test-dryrun.log'), 'utf8')
+    assert.match(line, /^\S+ !AIVDM,1,1,,A,/, 'config without the key: own vessel as AIVDM')
   } finally { plugin.stop() }
 })
 

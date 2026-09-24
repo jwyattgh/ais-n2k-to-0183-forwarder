@@ -2,9 +2,10 @@
 
 ## 0.1.2
 
-- New advanced setting "Send own vessel as AIVDM instead of AIVDO".
-  MarineTraffic and AISHub ignore `!AIVDO`, so without it your own vessel
-  never appears on those sites.
+- New advanced setting "Send own vessel as AIVDM instead of AIVDO", on by
+  default. AISHub does not display `!AIVDO`, and MarineTraffic locates a
+  vessel-mounted station from the vessel's own report, so without this your
+  own vessel never appears on those sites. Turn it off when feeding a plotter.
 
 ## 0.1.1
 
