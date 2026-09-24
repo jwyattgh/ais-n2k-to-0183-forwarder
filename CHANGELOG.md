@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Per-destination rate limit: "Seconds between position reports from the
+  same vessel", default 60 for new destinations. Static data always passes.
+  Destinations saved by earlier versions have no limit until you set one.
+- The status endpoint and status line show, per destination, lines sent and
+  messages held back by the limit.
+
 ## 0.1.2
 
 - New advanced setting "Send own vessel as AIVDM instead of AIVDO", on by

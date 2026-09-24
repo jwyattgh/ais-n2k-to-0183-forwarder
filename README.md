@@ -29,7 +29,11 @@ can get through.
 2. Server → Plugin Config → AIS N2K to 0183 Forwarder → add a stream:
    - **Connection**: the NMEA 2000 connection.
    - **Devices**: tick your AIS device. Only AIS devices are listed.
-   - **Destinations**: host, port and UDP or TCP for each service.
+   - **Destinations**: host, port and UDP or TCP for each service, and how
+     many seconds to wait between position reports from the same vessel.
+     The default of 60 suits MarineTraffic and AISHub, which keep one
+     position per vessel per minute anyway. Set 0 for a plotter, which
+     wants every report.
 3. Leave **Dry run** on and enable the plugin. Open
    `http://<server>/plugins/ais-n2k-to-0183-forwarder/log/<stream name>`
    and confirm sentences are arriving.
@@ -61,6 +65,15 @@ a plotter instead, untick "Send own vessel as AIVDM" under Advanced and
 your own vessel goes out as `!AIVDO`, which the plotter treats as "me".
 Each message is converted straight from the NMEA 2000 bytes, not from
 Signal K's data model, so nothing is rounded or lost.
+
+Each destination has its own rate limit on position reports (messages 1,
+2, 3, 4, 9, 11, 18, 19, 21 and 27): at most one per vessel per interval.
+Static data such as names, dimensions and voyage details always goes
+through. An own-vessel transponder can put its position on the bus every
+second, and neighbours report every few seconds, so without the limit
+most of what you send is repeats the services discard. The status page
+(`/plugins/ais-n2k-to-0183-forwarder/status`) shows, per destination, how
+many lines were sent and how many were held back.
 
 ## Other settings
 

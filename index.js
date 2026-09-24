@@ -22,6 +22,7 @@ const net = require('net')
 const path = require('path')
 const { FastPacketAssembler, parseLine } = require('./lib/fast-packet')
 const ais = require('./lib/ais')
+const { Throttle } = require('./lib/throttle')
 
 const ADDRESS_CLAIM = 60928
 const LOOKUP_REFRESH_MS = 5000
@@ -58,6 +59,14 @@ module.exports = function (app) {
           waitingFor: missingDevices(stream),
           sentences: stream.sentences,
           messages: stream.messages,
+          destinations: stream.destinations.map(d => ({
+            host: d.host,
+            port: d.port,
+            protocol: d.protocol,
+            positionIntervalSeconds: d.throttle.interval / 1000,
+            sent: d.sent,
+            heldBack: d.heldBack
+          })),
           converted: stream.converted,
           unconverted: stream.unconverted,
           errors: stream.errors,
@@ -127,6 +136,11 @@ module.exports = function (app) {
                       title: 'Protocol',
                       enum: ['udp', 'tcp'],
                       default: 'udp'
+                    },
+                    positionIntervalSeconds: {
+                      type: 'number',
+                      title: 'Seconds between position reports from the same vessel (0 sends every one; 60 is plenty for MarineTraffic and AISHub)',
+                      default: 60
                     }
                   }
                 }
@@ -325,9 +339,30 @@ module.exports = function (app) {
       return
     }
     stream.converted[whole.pgn] = (stream.converted[whole.pgn] || 0) + 1
-    splitSentence(sentence, stream).forEach(line => send(stream, line))
+    deliver(stream, sentence, splitSentence(sentence, stream))
   }
 
+  // One AIS message, already split into its NMEA 0183 lines. Each
+  // destination applies its own rate limit to the whole message, so a
+  // multi-line message is never sent in part.
+  function deliver (stream, sentence, lines) {
+    stream.sentences += lines.length
+    if (stream.logPath) {
+      lines.forEach(line => appendDryRun(stream, line + '\r\n'))
+      return
+    }
+    const now = Date.now()
+    stream.destinations.forEach(d => {
+      if (!d.throttle.allow(sentence, now)) {
+        d.heldBack++
+        return
+      }
+      lines.forEach(line => d.write(line + '\r\n'))
+      d.sent += lines.length
+    })
+  }
+
+  // Not converted (canboat JSON): one line per message, no rate limit.
   function send (stream, line) {
     stream.sentences++
     const data = line + '\r\n'
@@ -335,7 +370,7 @@ module.exports = function (app) {
       appendDryRun(stream, data)
       return
     }
-    stream.destinations.forEach(d => d.write(data))
+    stream.destinations.forEach(d => { d.write(data); d.sent++ })
   }
 
   function appendDryRun (stream, data) {
@@ -350,7 +385,15 @@ module.exports = function (app) {
 
   function openDestination (stream, dest) {
     const protocol = dest.protocol || 'udp'
-    const d = { host: dest.host, port: dest.port, protocol }
+    const d = {
+      host: dest.host,
+      port: dest.port,
+      protocol,
+      // Destinations saved before 0.1.3 have no interval: keep sending everything.
+      throttle: new Throttle(dest.positionIntervalSeconds),
+      sent: 0,
+      heldBack: 0
+    }
     if (protocol === 'udp') {
       d.socket = dgram.createSocket('udp4')
       d.socket.on('error', err => recordError(stream, err))
@@ -526,7 +569,9 @@ module.exports = function (app) {
         return `${c.name}: STOPPED, address ${[...stream.collisions].join(', ')} also used on another connection`
       }
       const at = [...stream.addresses].map(([a, n]) => `${n}@${a}`).join(', ')
-      const mode = stream.logPath ? 'dry run' : `to ${(c.destinations || []).map(d => `${d.host}:${d.port}`).join(', ')}`
+      const mode = stream.logPath
+        ? 'dry run'
+        : `to ${stream.destinations.map(d => `${d.host}:${d.port}` + (d.heldBack ? ` (${d.sent} sent, ${d.heldBack} held back by rate limit)` : '')).join(', ')}`
       // Message types from the chosen devices that never produced a sentence
       const skipped = Object.keys(stream.unconverted)
         .filter(p => !stream.converted[p])
