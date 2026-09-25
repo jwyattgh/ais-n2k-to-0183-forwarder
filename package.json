@@ -1,6 +1,6 @@
 {
   "name": "@sv-orion/ais-n2k-to-0183-forwarder",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Signal K plugin: forward AIS from chosen NMEA 2000 devices as NMEA 0183 (AIVDM/AIVDO) to one or more hosts",
   "main": "index.js",
   "files": [

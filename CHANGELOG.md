@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.4
+
+- A source Signal K makes up on its own can no longer stop a stream.
+  Signal K 2.27 files the alarms it raises under a source called
+  "notificationApi", typed NMEA 2000 and keyed by the address of the
+  device that sent the alarm. The plugin took that for a second
+  connection with the AIS receiver's address on it and stopped with
+  "address 1 also used on another connection", so nothing was uploaded
+  after a Cerbo GX firmware update to Venus OS 3.80. Only the server's
+  configured NMEA 2000 connections are compared now.
+
 ## 0.1.3
 
 - Per-destination rate limit: "Seconds between position reports from the

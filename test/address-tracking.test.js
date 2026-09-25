@@ -91,6 +91,60 @@ test('follows the AIS700 when its address changes', async () => {
   } finally { plugin.stop() }
 })
 
+test('a source that is not a configured connection cannot stop the stream', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'of-'))
+  const app = fakeApp(dir)
+  // Signal K 2.27 files the alarms it raises under a source of its own,
+  // typed NMEA 2000, keyed by the address of the device that sent the alarm.
+  const withAlarms = {
+    'ydwg-n2k-udp': { 1: { n2k: { canName: AIS700, src: '1' } } },
+    notificationApi: { 1: { n2k: { src: '1', pgns: { 65288: '2026-09-25T20:49:24.867Z' } } } }
+  }
+  app.signalk = { retrieve: () => ({ sources: withAlarms }) }
+  const provider = id => ({ id, pipeElements: [{ options: { type: 'NMEA2000', subOptions: { type: 'ydwg02-udp-canboatjs' } } }] })
+  app.config.settings = { pipedProviders: [provider('ydwg-n2k-udp'), provider('n2k-on-ve.can-socket')] }
+  const plugin = require('..')(app)
+  try {
+    plugin.start({
+      streams: [{
+        name: 'test', enabled: true, dryRun: true, connection: 'ydwg-n2k-udp',
+        devices: [AIS700], pgns: [], convert0183: true, includeOwnVessel: true
+      }]
+    })
+    const log = path.join(dir, 'test-dryrun.log')
+    position(app, 1)
+    assert.ok(fs.existsSync(log), 'sent: the alarm source is not another connection')
+    assert.doesNotMatch(app.status, /STOPPED/)
+  } finally { plugin.stop() }
+})
+
+test('the same address on a second configured connection still stops the stream', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'of-'))
+  const app = fakeApp(dir)
+  app.signalk = {
+    retrieve: () => ({
+      sources: {
+        'ydwg-n2k-udp': { 1: { n2k: { canName: AIS700, src: '1' } } },
+        'n2k-on-ve.can-socket': { 1: { n2k: { canName: '1122334455667788', src: '1' } } }
+      }
+    })
+  }
+  const provider = id => ({ id, pipeElements: [{ options: { type: 'NMEA2000', subOptions: { type: 'canbus-canboatjs' } } }] })
+  app.config.settings = { pipedProviders: [provider('ydwg-n2k-udp'), provider('n2k-on-ve.can-socket')] }
+  const plugin = require('..')(app)
+  try {
+    plugin.start({
+      streams: [{
+        name: 'test', enabled: true, dryRun: true, connection: 'ydwg-n2k-udp',
+        devices: [AIS700], pgns: [], convert0183: true, includeOwnVessel: true
+      }]
+    })
+    position(app, 1)
+    assert.ok(!fs.existsSync(path.join(dir, 'test-dryrun.log')), 'nothing sent: cannot tell the two apart')
+    assert.match(app.status, /STOPPED, address 1 also used on another connection/)
+  } finally { plugin.stop() }
+})
+
 test('own vessel goes out as AIVDM unless told otherwise', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'of-'))
   const app = fakeApp(dir)

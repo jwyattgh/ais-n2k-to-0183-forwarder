@@ -456,9 +456,15 @@ module.exports = function (app) {
         stream.addresses.set(addr, canName)
       }
     })
+    // Only the server's configured NMEA 2000 connections can put a device
+    // on a bus. Signal K also files sources of its own under the NMEA 2000
+    // type (2.27 lists the alarms it raises under "notificationApi", with
+    // the alarm sender's address), and those are not another connection.
+    const connections = new Set(knownConnections())
     const collisions = new Set()
     Object.keys(sources).forEach(connection => {
       if (connection === stream.config.connection) return
+      if (connections.size > 0 && !connections.has(connection)) return
       Object.keys(sources[connection] || {}).forEach(addr => {
         const dev = sources[connection][addr]
         if (stream.addresses.has(addr) && dev && dev.n2k) collisions.add(addr)
