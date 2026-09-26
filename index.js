@@ -145,6 +145,14 @@ module.exports = function (app) {
                   }
                 }
               },
+              sendTypes: {
+                type: 'array',
+                title: 'AIS message types to send',
+                description: 'All are ticked to start. Untick any you do not want sent.',
+                items: { type: 'string', enum: ais.converters.map(c => c.title) },
+                uniqueItems: true,
+                default: ais.converters.map(c => c.title)
+              },
               dryRun: {
                 type: 'boolean',
                 title: 'Dry run: write to a log file instead of sending',
@@ -154,12 +162,6 @@ module.exports = function (app) {
                 type: 'object',
                 title: 'Advanced',
                 properties: {
-                  messageTypes: {
-                    type: 'array',
-                    title: 'AIS message types (none ticked = all)',
-                    items: { type: 'string', enum: ais.converters.map(c => c.title) },
-                    uniqueItems: true
-                  },
                   includeOwnVessel: {
                     type: 'boolean',
                     title: 'Include own vessel',
@@ -189,12 +191,12 @@ module.exports = function (app) {
     streams: {
       'ui:options': { orderable: false },
       items: {
-        'ui:order': ['name', 'enabled', 'connection', 'devices', 'destinations', 'dryRun', 'advanced'],
+        'ui:order': ['name', 'enabled', 'connection', 'devices', 'destinations', 'sendTypes', 'dryRun', 'advanced'],
         devices: { 'ui:widget': 'checkboxes' },
         destinations: { 'ui:options': { orderable: false } },
+        sendTypes: { 'ui:widget': 'checkboxes' },
         advanced: {
-          'ui:options': { collapsed: true },
-          messageTypes: { 'ui:widget': 'checkboxes' }
+          'ui:options': { collapsed: true }
         }
       }
     }
@@ -245,11 +247,20 @@ module.exports = function (app) {
 
   function createStream (saved) {
     // The advanced settings live under `advanced` on the form; configs saved
-    // by 0.1.x had them at the top level. Accept both.
+    // by 0.1.0 and 0.1.1 had them at the top level. Accept both.
     const adv = saved.advanced || {}
+    // Message types: `sendTypes` from 0.1.5 lists what is sent, all ticked
+    // to start, so an empty list sends nothing. Before 0.1.5 the setting was
+    // `messageTypes`, where an empty list meant all; a config that has only
+    // that one keeps its meaning.
+    const legacyTypes = adv.messageTypes !== undefined ? adv.messageTypes : saved.messageTypes
+    const allTypes = ais.converters.map(c => c.title)
+    const sendTypes = saved.sendTypes !== undefined
+      ? saved.sendTypes
+      : (legacyTypes && legacyTypes.length > 0 ? legacyTypes : allTypes)
     const config = {
       ...saved,
-      messageTypes: adv.messageTypes !== undefined ? adv.messageTypes : saved.messageTypes,
+      sendTypes,
       includeOwnVessel: adv.includeOwnVessel !== undefined ? adv.includeOwnVessel : saved.includeOwnVessel,
       ownVesselAsAivdm: adv.ownVesselAsAivdm !== undefined ? adv.ownVesselAsAivdm : saved.ownVesselAsAivdm,
       convert0183: adv.convert0183 !== undefined ? adv.convert0183 : saved.convert0183
@@ -269,11 +280,9 @@ module.exports = function (app) {
       sequence: 0,
       destinations: []
     }
-    const chosen = config.messageTypes && config.messageTypes.length > 0
-      ? new Set(config.messageTypes)
-      : undefined
+    const chosen = new Set(config.sendTypes || [])
     stream.converters = new Map(
-      ais.converters.filter(c => !chosen || chosen.has(c.title)).map(c => [c.pgn, c])
+      ais.converters.filter(c => chosen.has(c.title)).map(c => [c.pgn, c])
     )
     if (config.dryRun !== false) {
       stream.logPath = path.join(app.getDataDirPath(), `${safeName(config.name)}-dryrun.log`)
@@ -313,7 +322,8 @@ module.exports = function (app) {
       send(stream, JSON.stringify(msg))
       return
     }
-    if (!stream.converters.has(msg.pgn)) {
+    // Only types the plugin cannot convert at all; unticked ones are not news.
+    if (!ais.byPgn.has(msg.pgn)) {
       stream.unconverted[msg.pgn] = (stream.unconverted[msg.pgn] || 0) + 1
     }
   }
@@ -568,6 +578,9 @@ module.exports = function (app) {
     }
     const parts = streams.map(stream => {
       const c = stream.config
+      if (stream.converters.size === 0 && c.convert0183 !== false) {
+        return `${c.name}: no message types ticked, nothing is sent`
+      }
       refreshFromSignalK(stream)
       const missing = missingDevices(stream)
       if (missing.length > 0) return `${c.name}: waiting to identify ${missing.join(', ')}`

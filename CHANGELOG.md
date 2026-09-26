@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.5
+
+- "AIS message types to send" has its own place on the settings page,
+  after the destinations, instead of sitting in Advanced next to the
+  other checkboxes. Every type is ticked to start; untick the ones you
+  don't want. The old setting said "none ticked = all", which read
+  wrong next to the ticked boxes below it.
+- With no type ticked, nothing is sent, and the status line says
+  "no message types ticked, nothing is sent".
+- Settings saved by earlier versions keep their meaning: an empty list
+  still sends every type, and a list you ticked still sends just those.
+  If you had ticked only some types, the settings page will show them
+  all ticked after the upgrade; untick the ones you don't want before
+  you next save, or saving sends everything.
+- A type you unticked no longer shows up as "not converted" on the
+  status line. That list is only for types the plugin can't convert.
+
 ## 0.1.4
 
 - A source Signal K makes up on its own can no longer stop a stream.

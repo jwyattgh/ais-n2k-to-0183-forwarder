@@ -34,6 +34,8 @@ can get through.
      The default of 60 suits MarineTraffic and AISHub, which keep one
      position per vessel per minute anyway. Set 0 for a plotter, which
      wants every report.
+   - **AIS message types to send**: all ticked to start. Untick any you
+     don't want sent; with none ticked nothing is sent.
 3. Leave **Dry run** on and enable the plugin. Open
    `http://<server>/plugins/ais-n2k-to-0183-forwarder/log/<stream name>`
    and confirm sentences are arriving.
@@ -79,7 +81,7 @@ many lines were sent and how many were held back.
 
 | Setting | Meaning |
 |---|---|
-| AIS message types | Limit which message types are sent. Empty means all. |
+| AIS message types to send | All ticked to start. Untick any you don't want sent. With none ticked nothing is sent, and the status line says so. |
 | Include own vessel | Off leaves out your own vessel's messages. |
 | Send own vessel as AIVDM | On by default. Off sends your own vessel as `!AIVDO`, which is right for a plotter but not for MarineTraffic or AISHub. |
 | Convert AIS to NMEA 0183 | Off sends canboat JSON instead, for debugging. |
