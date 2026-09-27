@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- "Dry run" moves up to sit under the stream's "Enabled" box. It was
+  directly below the message type checkboxes and looked like one of
+  them. Settings are unchanged; only the order on the page moved.
+
 ## 0.1.5
 
 - "AIS message types to send" has its own place on the settings page,

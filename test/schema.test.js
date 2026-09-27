@@ -53,7 +53,7 @@ test('settings form lists NMEA 2000 connections and AIS devices', () => {
   assert.strictEqual(ui.devices['ui:widget'], 'checkboxes')
   assert.strictEqual(ui.sendTypes['ui:widget'], 'checkboxes')
   assert.ok(ui['ui:order'].indexOf('sendTypes') < ui['ui:order'].indexOf('advanced'), 'its own section, before Advanced')
-  assert.deepStrictEqual(ui['ui:order'].slice(0, 4), ['name', 'enabled', 'connection', 'devices'])
+  assert.deepStrictEqual(ui['ui:order'].slice(0, 5), ['name', 'enabled', 'dryRun', 'connection', 'devices'], 'dry run next to Enabled, not under the message types')
   assert.strictEqual(stream.pgns, undefined, 'no raw PGN filter')
 })
 

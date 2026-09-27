@@ -191,7 +191,7 @@ module.exports = function (app) {
     streams: {
       'ui:options': { orderable: false },
       items: {
-        'ui:order': ['name', 'enabled', 'connection', 'devices', 'destinations', 'sendTypes', 'dryRun', 'advanced'],
+        'ui:order': ['name', 'enabled', 'dryRun', 'connection', 'devices', 'destinations', 'sendTypes', 'advanced'],
         devices: { 'ui:widget': 'checkboxes' },
         destinations: { 'ui:options': { orderable: false } },
         sendTypes: { 'ui:widget': 'checkboxes' },
